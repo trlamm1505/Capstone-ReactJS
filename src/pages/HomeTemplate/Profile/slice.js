@@ -128,7 +128,7 @@ export const fetchBookingHistory = createAsyncThunk(
                 throw new Error('No access token found');
             }
 
-            // Call the same API to get user info including booking history
+            // Call the ThongTinTaiKhoan API to get user info including booking history
             const response = await api.post("/QuanLyNguoiDung/ThongTinTaiKhoan", {}, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`
@@ -136,16 +136,109 @@ export const fetchBookingHistory = createAsyncThunk(
                 }
             });
 
-            // Extract booking history from response
-            const bookingHistory = response.data.content?.thongTinDatVe || [];
-            console.log('Booking history from API:', bookingHistory);
+            console.log('ThongTinTaiKhoan API response:', response.data);
 
-            return { content: bookingHistory };
+            // Extract booking history from API response
+            const apiBookingHistory = response.data.content?.thongTinDatVe || [];
+            console.log('Booking history from API:', apiBookingHistory);
+
+            // Process API booking data to extract all seats for each booking
+            const processedApiBookings = [];
+            apiBookingHistory.forEach(booking => {
+                if (booking.danhSachGhe && Array.isArray(booking.danhSachGhe)) {
+                    // Group seats by booking ID
+                    const seats = booking.danhSachGhe.map(seat => {
+                        // Extract row and column from tenGhe if available
+                        let row = seat.row;
+                        let column = seat.column;
+
+                        if (seat.tenGhe && !row && !column) {
+                            // If tenGhe is like "A1", "B2", etc.
+                            const match = seat.tenGhe.match(/^([A-Z])(\d+)$/);
+                            if (match) {
+                                row = match[1];
+                                column = parseInt(match[2]);
+                            } else {
+                                // If tenGhe is just a number, try to map to row/column
+                                const seatNum = parseInt(seat.tenGhe);
+                                if (seatNum) {
+                                    // Map seat number to row/column (assuming 16 seats per row)
+                                    const rowIndex = Math.floor((seatNum - 1) / 16);
+                                    const colIndex = (seatNum - 1) % 16 + 1;
+                                    row = String.fromCharCode(65 + rowIndex); // A, B, C, etc.
+                                    column = colIndex;
+                                }
+                            }
+                        }
+
+                        return {
+                            maGhe: seat.maGhe,
+                            tenGhe: seat.tenGhe,
+                            row: row || 'A',
+                            column: column || 1,
+                            maRap: seat.maRap,
+                            tenRap: seat.tenRap,
+                            maCumRap: seat.maCumRap,
+                            tenCumRap: seat.tenCumRap,
+                            maHeThongRap: seat.maHeThongRap,
+                            tenHeThongRap: seat.tenHeThongRap
+                        };
+                    });
+
+                    processedApiBookings.push({
+                        ...booking,
+                        danhSachGhe: seats,
+                        // Use first seat info for display
+                        maGhe: seats[0]?.maGhe,
+                        tenGhe: seats[0]?.tenGhe,
+                        maRap: seats[0]?.maRap,
+                        tenRap: seats[0]?.tenRap,
+                        maCumRap: seats[0]?.maCumRap,
+                        tenCumRap: seats[0]?.tenCumRap,
+                        maHeThongRap: seats[0]?.maHeThongRap,
+                        tenHeThongRap: seats[0]?.tenHeThongRap
+                    });
+                } else {
+                    // If no danhSachGhe, keep the booking as is
+                    processedApiBookings.push(booking);
+                }
+            });
+
+            console.log('Processed API bookings:', processedApiBookings);
+
+            // Get booking history from localStorage (complete booking info)
+            const localStorageBookings = JSON.parse(localStorage.getItem('userBookings') || '[]');
+            console.log('Booking history from localStorage:', localStorageBookings);
+
+            // Combine API data with localStorage data for complete information
+            const combinedBookings = [...localStorageBookings, ...processedApiBookings];
+
+            // Remove duplicates based on maVe/mave and maGhe combination
+            const uniqueBookings = combinedBookings
+                .filter((booking, index, self) =>
+                    index === self.findIndex(b =>
+                        (b.maVe === booking.maVe || b.mave === booking.mave) &&
+                        (b.maGhe === booking.maGhe)
+                    )
+                )
+                .filter(booking => {
+                    // Only show bookings with complete information
+                    return booking.tenPhim &&
+                        booking.tenPhim !== 'Unknown Movie' &&
+                        (booking.maVe || booking.mave) &&
+                        (booking.maVe !== 'Unknown' && booking.mave !== 'Unknown') &&
+                        booking.ngayDat &&
+                        booking.maGhe;
+                });
+
+            console.log('Final booking history:', uniqueBookings);
+            return { content: uniqueBookings };
         } catch (error) {
             console.error('Error fetching booking history:', error);
-            // If fails, return empty array
-            console.log('Failed to get booking history, returning empty array');
-            return { content: [] };
+            // If API fails, still return localStorage data
+            const localStorageBookings = JSON.parse(localStorage.getItem('userBookings') || '[]');
+            console.log('API failed, returning localStorage data:', localStorageBookings);
+            return { content: localStorageBookings };
         }
     }
 );

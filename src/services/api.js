@@ -32,4 +32,22 @@ api.interceptors.request.use((config) => {
     };
 });
 
+// Add response interceptor to handle token expiration
+api.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+        if (error.response?.status === 401) {
+            console.log('API Interceptor: Token expired (401), clearing auth data but staying on current page');
+            // Clear auth data without redirecting
+            localStorage.removeItem('auth_user');
+            localStorage.removeItem('auth_isAuthenticated');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('lastActivity');
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default api;

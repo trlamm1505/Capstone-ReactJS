@@ -386,34 +386,84 @@ function Profile() {
                 ) : (
                     /* Booking History Tab */
                     <div className="bg-gray-800 rounded-lg p-8">
-                        <h2 className="text-2xl font-bold mb-6">Lịch Sử Đặt Vé</h2>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold">Lịch Sử Đặt Vé</h2>
+                        </div>
 
                         {bookingHistory && bookingHistory.length > 0 ? (
                             <div className="space-y-4 max-h-96 overflow-y-auto">
-                                {bookingHistory.map((booking, index) => (
-                                    <div key={index} className="bg-gray-700 rounded-lg p-4">
-                                        <div className="flex items-start space-x-3">
-                                            <img
-                                                src={booking.hinhAnh || 'https://via.placeholder.com/60x90/1f2937/ffffff?text=Movie'}
-                                                alt={booking.tenPhim || 'Movie'}
-                                                className="w-15 h-22 object-cover rounded"
-                                            />
-                                            <div className="flex-1">
-                                                <h3 className="text-lg font-semibold mb-1">{booking.tenPhim || 'Unknown Movie'}</h3>
-                                                <p className="text-gray-400 text-sm mb-1">{booking.tenCumRap || 'Unknown Cinema'}</p>
-                                                <p className="text-gray-400 text-sm mb-1">{booking.diaChi || 'Unknown Address'}</p>
-                                                <p className="text-xs text-gray-500">
-                                                    Ngày đặt: {formatDate(booking.ngayDat)} - {booking.tenRap || 'Unknown Theater'} - Ghế {booking.maGhe || 'Unknown Seat'}
-                                                </p>
+                                {bookingHistory
+                                    .filter(booking =>
+                                        booking.tenPhim &&
+                                        booking.tenPhim !== 'Unknown Movie' &&
+                                        (booking.maVe || booking.mave) &&
+                                        (booking.maVe !== 'Unknown' && booking.mave !== 'Unknown') &&
+                                        booking.ngayDat
+                                    )
+                                    .map((booking, index) => (
+                                        <div key={index} className="bg-gray-700 rounded-lg p-4">
+                                            <div className="flex items-start space-x-4">
+                                                <img
+                                                    src={booking.hinhAnh || 'https://via.placeholder.com/60x90/1f2937/ffffff?text=Movie'}
+                                                    alt={booking.tenPhim || 'Movie'}
+                                                    className="w-15 h-22 object-cover rounded flex-shrink-0"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="text-lg font-semibold mb-2 text-white">
+                                                        {booking.tenPhim || 'Unknown Movie'}
+                                                    </h3>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                                        <div>
+                                                            <span className="text-gray-400">Rạp:</span>
+                                                            <span className="text-white ml-2">
+                                                                {booking.tenRap || 'Unknown Theater'}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-400">Hệ thống rạp:</span>
+                                                            <span className="text-white ml-2">
+                                                                {booking.tenHeThongRap || 'Unknown System'}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-400">Ghế:</span>
+                                                            <span className="text-white ml-2">
+                                                                {booking.danhSachGhe && Array.isArray(booking.danhSachGhe)
+                                                                    ? booking.danhSachGhe.map(seat => `${seat.row}${seat.column}`).join(', ')
+                                                                    : (booking.tenGhe || booking.maGhe || 'Unknown Seat')
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-400">Thời lượng:</span>
+                                                            <span className="text-white ml-2">
+                                                                {booking.thoiLuongPhim ? `${booking.thoiLuongPhim} phút` : 'Unknown Duration'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-3 pt-3 border-t border-gray-600">
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="text-xs text-gray-400">
+                                                                <span>Mã vé: </span>
+                                                                <span className="text-white font-mono">{booking.maVe || booking.mave || 'Unknown'}</span>
+                                                            </div>
+                                                            <div className="text-xs text-gray-400">
+                                                                Ngày đặt: {formatDate(booking.ngayDat)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
                             </div>
                         ) : (
                             <div className="text-center text-gray-400 py-12">
                                 <div className="text-4xl mb-4">🎬</div>
                                 <p className="text-lg">Chưa có lịch sử đặt vé</p>
+                                <p className="text-sm mt-2">Hãy đặt vé để xem lịch sử tại đây</p>
                             </div>
                         )}
                     </div>

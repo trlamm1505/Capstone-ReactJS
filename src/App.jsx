@@ -5,13 +5,13 @@ import AuthInitializer from "./pages/HomeTemplate/_components/AuthInitializer";
 
 function App() {
   return (
-    <AuthInitializer>
-      <BrowserRouter>
+    <BrowserRouter>
+      <AuthInitializer>
         <Routes>
           {generateRoutes(routes)}
         </Routes>
-      </BrowserRouter>
-    </AuthInitializer>
+      </AuthInitializer>
+    </BrowserRouter>
   );
 }
 

@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logout } from '../../LoginPage/slice';
 import { useNavigation } from '../../Context/NavigationContext';
+import sessionManager from '../../../../utils/sessionManager';
 
 const Header = () => {
     const dispatch = useDispatch();
@@ -38,6 +39,18 @@ const Header = () => {
         dispatch(logout());
         setIsUserDropdownOpen(false);
         navigate('/');
+    };
+
+    // Test auto logout functionality
+    const testAutoLogout = () => {
+        console.log('Testing auto logout...');
+        sessionManager.testAutoLogout();
+    };
+
+    // Test with short timeout
+    const testShortTimeout = () => {
+        console.log('Setting test timeout to 10 seconds...');
+        sessionManager.setTestTimeout(10);
     };
 
     const handleSignIn = () => {
@@ -129,7 +142,7 @@ const Header = () => {
         }
     };
 
-    const isHomeActive = location.pathname === '/' || location.pathname === '/home';
+    const isHomeActive = location.pathname === '/';
 
     // Get display name - prioritize hoTen, fallback to taikhoan
     const getDisplayName = () => {
@@ -167,7 +180,7 @@ const Header = () => {
                         <nav className="hidden md:flex items-center space-x-8 lg:space-x-12">
                             <button
                                 onClick={handleHomeClick}
-                                className="text-white font-semibold uppercase tracking-wide hover:text-yellow-400 transition-colors duration-200 relative group"
+                                className="text-white font-semibold uppercase tracking-wide hover:text-yellow-400 transition-colors duration-200 relative group cursor-pointer"
                             >
                                 <span className="relative">
                                     TRANG CHỦ
@@ -178,13 +191,13 @@ const Header = () => {
                             </button>
                             <button
                                 onClick={handleListMovieClick}
-                                className="text-white font-semibold uppercase tracking-wide hover:text-yellow-400 transition-colors duration-200"
+                                className="text-white font-semibold uppercase tracking-wide hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
                             >
                                 DANH SÁCH PHIM
                             </button>
                             <button
                                 onClick={handleCinemaClick}
-                                className="text-white font-semibold uppercase tracking-wide hover:text-yellow-400 transition-colors duration-200"
+                                className="text-white font-semibold uppercase tracking-wide hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
                             >
                                 RẠP
                             </button>
@@ -197,13 +210,13 @@ const Header = () => {
                                 <div className="hidden lg:flex items-center space-x-4">
                                     <button
                                         onClick={handleSignIn}
-                                        className="text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200"
+                                        className="text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
                                     >
                                         ĐĂNG NHẬP
                                     </button>
                                     <button
                                         onClick={handleSignUp}
-                                        className="text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200"
+                                        className="text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
                                     >
                                         ĐĂNG KÝ
                                     </button>
@@ -215,7 +228,7 @@ const Header = () => {
                                 <div className="relative z-[99999]">
                                     <button
                                         onClick={toggleUserDropdown}
-                                        className="flex items-center space-x-2 bg-transparent border border-dashed border-gray-400 rounded px-3 py-1 hover:border-yellow-400 transition-colors duration-200"
+                                        className="flex items-center space-x-2 bg-transparent border border-dashed border-gray-400 rounded px-3 py-1 hover:border-yellow-400 transition-colors duration-200 cursor-pointer"
                                     >
                                         <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gray-300 flex items-center justify-center">
                                             <svg className="w-5 h-5 lg:w-6 lg:h-6 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
@@ -231,7 +244,7 @@ const Header = () => {
                                     {/* Backdrop for dropdown */}
                                     {isUserDropdownOpen && (
                                         <div
-                                            className="fixed inset-0 z-[99998]"
+                                            className="fixed inset-0 z-[99998] cursor-pointer"
                                             onClick={() => setIsUserDropdownOpen(false)}
                                         ></div>
                                     )}
@@ -245,13 +258,13 @@ const Header = () => {
                                             </div>
                                             <button
                                                 onClick={handleProfileClick}
-                                                className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700"
+                                                className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer"
                                             >
                                                 Profile
                                             </button>
                                             <button
                                                 onClick={handleLogout}
-                                                className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700"
+                                                className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer"
                                             >
                                                 Logout
                                             </button>
@@ -263,7 +276,7 @@ const Header = () => {
                             {/* Mobile Menu Button */}
                             <button
                                 onClick={toggleMenu}
-                                className="md:hidden flex items-center p-2 rounded-md text-white hover:text-yellow-400 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-yellow-400"
+                                className="md:hidden flex items-center p-2 rounded-md text-white hover:text-yellow-400 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-yellow-400 cursor-pointer"
                             >
                                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     {isMenuOpen ? (
@@ -299,13 +312,13 @@ const Header = () => {
                                     <div className="pt-4 flex space-x-4">
                                         <button
                                             onClick={handleSignIn}
-                                            className="text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200"
+                                            className="text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
                                         >
                                             ĐĂNG NHẬP
                                         </button>
                                         <button
                                             onClick={handleSignUp}
-                                            className="text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200"
+                                            className="text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
                                         >
                                             ĐĂNG KÝ
                                         </button>
@@ -321,9 +334,22 @@ const Header = () => {
                                         </div>
                                         <button
                                             onClick={handleLogout}
-                                            className="block w-full text-left px-3 py-2 text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200"
+                                            className="block w-full text-left px-3 py-2 text-white font-semibold uppercase tracking-wide text-sm hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
                                         >
                                             LOGOUT
+                                        </button>
+                                        {/* Test buttons for auto logout */}
+                                        <button
+                                            onClick={testAutoLogout}
+                                            className="block w-full text-left px-3 py-2 text-red-400 font-semibold uppercase tracking-wide text-sm hover:text-red-300 transition-colors duration-200 cursor-pointer"
+                                        >
+                                            TEST AUTO LOGOUT
+                                        </button>
+                                        <button
+                                            onClick={testShortTimeout}
+                                            className="block w-full text-left px-3 py-2 text-orange-400 font-semibold uppercase tracking-wide text-sm hover:text-orange-300 transition-colors duration-200 cursor-pointer"
+                                        >
+                                            TEST 10S TIMEOUT
                                         </button>
                                     </div>
                                 )}
