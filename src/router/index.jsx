@@ -7,6 +7,8 @@ import Register from "../pages/HomeTemplate/RegisterPage/Register"
 import MovieDetail from "../pages/HomeTemplate/MovieDetailPage/MovieDetail"
 import Profile from "../pages/HomeTemplate/Profile/Profile"
 import ListMovie from "../pages/HomeTemplate/ListMovie/ListMovie"
+import CinemaLayout from "../pages/HomeTemplate/CinemaLayout/CinemaLayout"
+import BookingSuccess from "../pages/HomeTemplate/BookingSuccess/BookingSuccess"
 import { Route } from "react-router-dom";
 
 export const routes = [
@@ -16,10 +18,6 @@ export const routes = [
         nested: [
             {
                 path: "",
-                element: <Home />
-            },
-            {
-                path: "home",
                 element: <Home />
             },
             {
@@ -37,6 +35,14 @@ export const routes = [
             {
                 path: "chitietphim/:maPhim",
                 element: <MovieDetail />
+            },
+            {
+                path: "chitietphongve/:maLichChieu",
+                element: <CinemaLayout />
+            },
+            {
+                path: "booking-success",
+                element: <BookingSuccess />
             }
         ]
     },
@@ -44,7 +50,7 @@ export const routes = [
         path: "admin",
         element: <AdminTemplate />,
         nested: [
-            // Add admin routes here if needed
+
         ]
     },
     {

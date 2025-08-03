@@ -17,14 +17,15 @@ const Footer = () => {
     };
 
     const handleHomeClick = () => {
-        // If already on home page, scroll to top
-        if (location.pathname === '/' || location.pathname === '/home') {
-            scrollToTop();
-        } else {
-            // If on other pages, navigate to home
+        // Always navigate to home page and scroll to top
+        if (location.pathname !== '/') {
             allowNavigation('/');
             navigate('/');
         }
+        // Scroll to top after a short delay to ensure navigation is complete
+        setTimeout(() => {
+            scrollToTop();
+        }, 100);
     };
 
     const handleLoginClick = () => {
@@ -94,7 +95,7 @@ const Footer = () => {
                                 <li>
                                     <button
                                         onClick={handleHomeClick}
-                                        className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base"
+                                        className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base cursor-pointer"
                                     >
                                         Trang Chủ
                                     </button>
@@ -102,7 +103,7 @@ const Footer = () => {
                                 <li>
                                     <button
                                         onClick={() => navigate('/listmovie')}
-                                        className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base"
+                                        className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base cursor-pointer"
                                     >
                                         Danh Sách Phim
                                     </button>
@@ -127,7 +128,7 @@ const Footer = () => {
                                         <li>
                                             <button
                                                 onClick={handleProfileClick}
-                                                className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base"
+                                                className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base cursor-pointer"
                                             >
                                                 Thông Tin Cá Nhân
                                             </button>
@@ -138,7 +139,7 @@ const Footer = () => {
                                         <li>
                                             <button
                                                 onClick={handleLoginClick}
-                                                className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base"
+                                                className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base cursor-pointer"
                                             >
                                                 Đăng Nhập
                                             </button>
@@ -146,7 +147,7 @@ const Footer = () => {
                                         <li>
                                             <button
                                                 onClick={handleRegisterClick}
-                                                className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base"
+                                                className="text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base cursor-pointer"
                                             >
                                                 Đăng Ký
                                             </button>
@@ -169,7 +170,7 @@ const Footer = () => {
                         {/* Back to Top Button */}
                         <button
                             onClick={scrollToTop}
-                            className="flex items-center space-x-2 text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base group"
+                            className="flex items-center space-x-2 text-gray-300 hover:text-yellow-400 transition-colors duration-200 text-sm lg:text-base group cursor-pointer"
                         >
                             <span>Back to top</span>
                             <svg

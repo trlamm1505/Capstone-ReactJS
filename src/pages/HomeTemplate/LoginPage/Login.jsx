@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { loginUser, clearError } from './slice';
 import { useNavigation } from '../Context/NavigationContext';
+import { bookTickets } from '../CinemaLayout/slice';
 
 function Login() {
     const dispatch = useDispatch();
@@ -20,20 +21,61 @@ function Login() {
             console.log('User logged in:', user);
             console.log('User type:', user.maLoaiNguoiDung);
 
-            // Check user type and redirect accordingly
-            if (user.maLoaiNguoiDung === 'QuanTri') {
-                console.log('Redirecting to admin page');
-                allowNavigation('/admin');
-                navigate('/admin');
-            } else if (user.maLoaiNguoiDung === 'KhachHang') {
-                console.log('Redirecting to home page');
-                navigate('/');
+            // Check if there's a pending booking
+            const pendingBooking = localStorage.getItem('pendingBooking');
+            const selectedSeats = localStorage.getItem('selectedSeats');
+            const bookingInfo = localStorage.getItem('bookingInfo');
+
+            if (pendingBooking && selectedSeats && bookingInfo) {
+                const bookingData = JSON.parse(pendingBooking);
+                const bookingInfoData = JSON.parse(bookingInfo);
+
+                // Create complete booking data with seat and cinema information
+                const completeBookingData = {
+                    ...bookingData,
+                    // Add cinema and seat information from bookingInfo
+                    maRap: bookingInfoData.maRap,
+                    tenRap: bookingInfoData.tenRap,
+                    maHeThongRap: bookingInfoData.maHeThongRap,
+                    tenHeThongRap: bookingInfoData.tenHeThongRap,
+                    maCumRap: bookingInfoData.maCumRap,
+                    tenCumRap: bookingInfoData.tenCumRap,
+                    // Add seat information
+                    danhSachVe: JSON.parse(selectedSeats).map(seat => ({
+                        maGhe: seat.id,
+                        tenGhe: seat.tenGhe || `${seat.row}${seat.column}`,
+                        giaVe: seat.price
+                    }))
+                };
+
+                dispatch(bookTickets(completeBookingData)).then((result) => {
+                    if (result.meta.requestStatus === 'fulfilled') {
+                        localStorage.removeItem('pendingBooking');
+                        localStorage.removeItem('selectedSeats');
+                        localStorage.removeItem('bookingInfo');
+                        navigate('/booking-success', {
+                            state: {
+                                from: `/chitietphongve/${bookingData.maLichChieu}`
+                            }
+                        });
+                    }
+                });
             } else {
-                console.log('Unknown user type, redirecting to home page');
-                navigate('/');
+                // Check user type and redirect accordingly
+                if (user.maLoaiNguoiDung === 'QuanTri') {
+                    console.log('Redirecting to admin page');
+                    allowNavigation('/admin');
+                    navigate('/admin');
+                } else if (user.maLoaiNguoiDung === 'KhachHang') {
+                    console.log('Redirecting to home page');
+                    navigate('/');
+                } else {
+                    console.log('Unknown user type, redirecting to home page');
+                    navigate('/');
+                }
             }
         }
-    }, [isAuthenticated, user, navigate, allowNavigation]);
+    }, [isAuthenticated, user, navigate, allowNavigation, dispatch]);
 
     useEffect(() => {
         dispatch(clearError());

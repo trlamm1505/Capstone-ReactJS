@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchMovieDetail, fetchCinemaSystems, fetchCinemaShowtimes } from './slice';
+import { fetchMovieDetail, fetchCinemaSystems, fetchMovieShowtimes } from './slice';
 
 function MovieDetail() {
     const { maPhim } = useParams();
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const {
         loading,
         data,
@@ -13,39 +14,42 @@ function MovieDetail() {
         cinemaSystemsLoading,
         cinemaSystemsData,
         cinemaSystemsError,
-        cinemaShowtimesLoading,
-        cinemaShowtimesData,
-        cinemaShowtimesError
+        showtimesLoading,
+        showtimesData,
+        showtimesError
     } = useSelector((state) => state.movieDetail);
 
     const [selectedCinema, setSelectedCinema] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [isTrailerModalOpen, setIsTrailerModalOpen] = useState(false);
+    const [isTrailerClosing, setIsTrailerClosing] = useState(false);
 
     useEffect(() => {
         if (maPhim) {
             dispatch(fetchMovieDetail(maPhim));
             dispatch(fetchCinemaSystems());
+            dispatch(fetchMovieShowtimes(maPhim));
         }
     }, [maPhim, dispatch]);
 
-    // Fetch showtimes when cinema is selected
+    // Auto-select first cinema when showtimes data is loaded
     useEffect(() => {
-        if (selectedCinema !== null && cinemaSystemsData?.content) {
-            const cinema = cinemaSystemsData.content[selectedCinema];
-            console.log('Selected cinema:', cinema);
-            dispatch(fetchCinemaShowtimes({
-                maHeThongRap: cinema.maHeThongRap,
-                maNhom: "GP07"
-            }));
+        if (showtimesData && showtimesData.content && selectedCinema === null) {
+            const extractedShowtimes = extractShowtimes(showtimesData.content);
+            const groupedShowtimes = groupShowtimesByCinema(extractedShowtimes);
+
+            if (Object.keys(groupedShowtimes).length > 0) {
+                setSelectedCinema(0);
+            }
         }
-    }, [selectedCinema, cinemaSystemsData, dispatch]);
+    }, [showtimesData, selectedCinema]);
 
     // Debug showtimes data
     useEffect(() => {
-        if (cinemaShowtimesData) {
-            console.log('Cinema showtimes data:', cinemaShowtimesData);
+        if (showtimesData) {
+            console.log('Movie showtimes data:', showtimesData);
         }
-    }, [cinemaShowtimesData]);
+    }, [showtimesData]);
 
     // Generate dates for the next 7 days
     const generateDates = () => {
@@ -56,6 +60,52 @@ function MovieDetail() {
             dates.push(date);
         }
         return dates;
+    };
+
+    // Check if a date is today
+    const isToday = (date) => {
+        const today = new Date();
+        return date.toDateString() === today.toDateString();
+    };
+
+    // Check if a date is selected
+    const isDateSelected = (date) => {
+        return date.toDateString() === selectedDate.toDateString();
+    };
+
+    // Handle date selection
+    const handleDateSelect = (date) => {
+        setSelectedDate(date);
+    };
+
+    // Filter showtimes for selected date
+    const getShowtimesForDate = (showtimes, selectedDate) => {
+        if (!isToday(selectedDate)) {
+            return []; // Return empty array for non-today dates
+        }
+        return showtimes; // Return all showtimes for today
+    };
+
+    // Handle trailer modal
+    const handleTrailerClick = () => {
+        setIsTrailerModalOpen(true);
+        setIsTrailerClosing(false);
+    };
+
+    const handleCloseTrailerModal = () => {
+        setIsTrailerClosing(true);
+        setTimeout(() => {
+            setIsTrailerModalOpen(false);
+            setIsTrailerClosing(false);
+        }, 300);
+    };
+
+    // Extract YouTube video ID from trailer URL
+    const getYouTubeVideoId = (url) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
     };
 
     if (loading || cinemaSystemsLoading) {
@@ -76,7 +126,7 @@ function MovieDetail() {
 
     const movie = data?.content;
     const cinemaSystems = cinemaSystemsData?.content;
-    const showtimes = cinemaShowtimesData?.content;
+    const showtimes = showtimesData?.content;
 
     if (!movie) {
         return (
@@ -86,22 +136,26 @@ function MovieDetail() {
         );
     }
 
-    // Helper function to extract showtimes from the API response
+    // Get video ID after movie is available
+    const videoId = getYouTubeVideoId(movie?.trailer);
+
+    // Helper function to extract showtimes from the new API response structure
     const extractShowtimes = (showtimesData) => {
-        if (!showtimesData || !Array.isArray(showtimesData)) return [];
+        if (!showtimesData || !Array.isArray(showtimesData.heThongRapChieu)) return [];
 
         const allShowtimes = [];
 
-        showtimesData.forEach(cumRap => {
-            if (cumRap.danhSachPhim) {
-                cumRap.danhSachPhim.forEach(phim => {
-                    if (phim.lstLichChieuTheoPhim) {
-                        phim.lstLichChieuTheoPhim.forEach(lichChieu => {
+        showtimesData.heThongRapChieu.forEach(heThongRap => {
+            if (heThongRap.cumRapChieu) {
+                heThongRap.cumRapChieu.forEach(cumRap => {
+                    if (cumRap.lichChieuPhim) {
+                        cumRap.lichChieuPhim.forEach(lichChieu => {
                             allShowtimes.push({
                                 ...lichChieu,
-                                tenRap: lichChieu.tenRap,
-                                ngayChieuGioChieu: lichChieu.ngayChieuGioChieu,
-                                giaVe: lichChieu.giaVe
+                                tenHeThongRap: heThongRap.tenHeThongRap,
+                                logoHeThongRap: heThongRap.logo,
+                                tenCumRap: cumRap.tenCumRap,
+                                diaChi: cumRap.diaChi
                             });
                         });
                     }
@@ -112,15 +166,46 @@ function MovieDetail() {
         return allShowtimes;
     };
 
+    // Group showtimes by cinema system and complex
+    const groupShowtimesByCinema = (showtimes) => {
+        const grouped = {};
+
+        showtimes.forEach(showtime => {
+            const cinemaKey = showtime.tenHeThongRap;
+            if (!grouped[cinemaKey]) {
+                grouped[cinemaKey] = {
+                    tenHeThongRap: showtime.tenHeThongRap,
+                    logo: showtime.logoHeThongRap,
+                    cumRap: {}
+                };
+            }
+
+            const cumRapKey = showtime.tenCumRap;
+            if (!grouped[cinemaKey].cumRap[cumRapKey]) {
+                grouped[cinemaKey].cumRap[cumRapKey] = {
+                    tenCumRap: showtime.tenCumRap,
+                    diaChi: showtime.diaChi,
+                    showtimes: []
+                };
+            }
+
+            grouped[cinemaKey].cumRap[cumRapKey].showtimes.push(showtime);
+        });
+
+        return grouped;
+    };
+
     const extractedShowtimes = extractShowtimes(showtimes);
+    const groupedShowtimes = groupShowtimesByCinema(extractedShowtimes);
+    const selectedCinemaData = selectedCinema !== null ? groupedShowtimes[Object.keys(groupedShowtimes)[selectedCinema]] : null;
 
     return (
         <div className="min-h-screen bg-gray-900 text-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                {/* Movie Header */}
+                {/* Movie Header - Standardized Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                    {/* Movie Image */}
-                    <div className="relative">
+                    {/* Movie Poster - Fixed Height */}
+                    <div className="relative h-[500px]">
                         <img
                             src={movie.hinhAnh}
                             alt={movie.tenPhim}
@@ -132,28 +217,35 @@ function MovieDetail() {
                         <div className="absolute top-4 right-4 bg-yellow-400 text-gray-900 px-3 py-1 rounded text-lg font-semibold">
                             {movie.danhGia}/10
                         </div>
+                        <div className="absolute bottom-4 left-4 text-white text-sm">
+                            MỘT BỘ PHIM CỦA {movie.daoDien || 'VICTOR VU'}
+                        </div>
                     </div>
 
-                    {/* Movie Info */}
+                    {/* Movie Information - Flexible Height */}
                     <div className="space-y-6">
                         <div>
-                            <h1 className="text-4xl lg:text-5xl font-bold mb-4">{movie.tenPhim}</h1>
-                            <p className="text-xl text-gray-300 mb-4">{movie.moTa}</p>
+                            <h1 className="text-3xl lg:text-4xl font-bold mb-4 text-white uppercase">
+                                {movie.tenPhim}
+                            </h1>
+                            <p className="text-lg text-gray-300 mb-6 leading-relaxed">
+                                {movie.moTa}
+                            </p>
                         </div>
 
                         <div className="space-y-4">
                             <div className="flex items-center space-x-4">
-                                <span className="text-yellow-400 font-semibold">Ngày khởi chiếu:</span>
-                                <span>{new Date(movie.ngayKhoiChieu).toLocaleDateString('vi-VN')}</span>
+                                <span className="text-yellow-400 font-semibold min-w-[120px]">Ngày khởi chiếu:</span>
+                                <span className="text-white">{new Date(movie.ngayKhoiChieu).toLocaleDateString('vi-VN')}</span>
                             </div>
 
                             <div className="flex items-center space-x-4">
-                                <span className="text-yellow-400 font-semibold">Đánh giá:</span>
-                                <span>{movie.danhGia}/10</span>
+                                <span className="text-yellow-400 font-semibold min-w-[120px]">Đánh giá:</span>
+                                <span className="text-white">{movie.danhGia}/10</span>
                             </div>
 
                             <div className="flex items-center space-x-4">
-                                <span className="text-yellow-400 font-semibold">Trạng thái:</span>
+                                <span className="text-yellow-400 font-semibold min-w-[120px]">Trạng thái:</span>
                                 <span className={`px-3 py-1 rounded text-sm font-semibold ${movie.dangChieu ? 'bg-green-500 text-white' :
                                     movie.sapChieu ? 'bg-blue-500 text-white' : 'bg-gray-500 text-white'
                                     }`}>
@@ -163,23 +255,24 @@ function MovieDetail() {
 
                             {movie.trailer && (
                                 <div className="flex items-center space-x-4">
-                                    <span className="text-yellow-400 font-semibold">Trailer:</span>
-                                    <a
-                                        href={movie.trailer}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-400 hover:text-blue-300 underline"
+                                    <span className="text-yellow-400 font-semibold min-w-[120px]">Trailer:</span>
+                                    <button
+                                        onClick={handleTrailerClick}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 inline-flex items-center cursor-pointer"
                                     >
+                                        <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                        </svg>
                                         Xem trailer
-                                    </a>
+                                    </button>
                                 </div>
                             )}
                         </div>
 
-                        <div className="pt-6">
+                        <div className="pt-4">
                             <button
                                 onClick={() => window.history.back()}
-                                className="bg-yellow-400 text-gray-900 px-6 py-3 rounded-lg font-semibold hover:bg-yellow-300 transition-colors duration-200"
+                                className="bg-yellow-400 text-gray-900 px-6 py-3 rounded-lg font-semibold hover:bg-yellow-300 transition-colors duration-200 cursor-pointer"
                             >
                                 Quay lại
                             </button>
@@ -187,121 +280,145 @@ function MovieDetail() {
                     </div>
                 </div>
 
-                {/* Cinema Showtimes Section */}
-                {cinemaSystems && cinemaSystems.length > 0 && (
+                {/* Movie Showtimes Section - Standardized Layout */}
+                {showtimesLoading ? (
+                    <div className="mt-12 text-center">
+                        <div className="text-gray-400 text-xl">Đang tải lịch chiếu...</div>
+                    </div>
+                ) : showtimesError ? (
+                    <div className="mt-12 text-center">
+                        <div className="text-red-400 text-xl">Lỗi: {showtimesError}</div>
+                    </div>
+                ) : Object.keys(groupedShowtimes).length > 0 ? (
                     <div className="mt-12">
                         <h2 className="text-3xl font-bold mb-8 text-center">Lịch Chiếu</h2>
 
+                        {/* Date Navigation - Standardized */}
+                        <div className="flex items-center justify-between mb-6">
+                            <button className="text-gray-400 hover:text-white cursor-pointer">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+
+                            <div className="flex space-x-2">
+                                {generateDates().map((date, index) => (
+                                    <button
+                                        key={index}
+                                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${isDateSelected(date)
+                                            ? 'bg-red-500 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600 cursor-pointer'
+                                            }`}
+                                        onClick={() => handleDateSelect(date)}
+                                    >
+                                        {date.getDate()}/{String(date.getMonth() + 1).padStart(2, '0')} {date.toLocaleDateString('vi-VN', { weekday: 'short' })}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button className="text-gray-400 hover:text-white cursor-pointer">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+
                         <div className="flex">
-                            {/* Cinema Systems Sidebar */}
+                            {/* Cinema Systems Sidebar - Standardized */}
                             <div className="w-64 bg-gray-800 rounded-l-lg p-4">
                                 <div className="space-y-4">
-                                    {cinemaSystems.map((cinema, index) => (
-                                        <div
-                                            key={index}
-                                            className={`flex flex-col items-center p-3 rounded-lg cursor-pointer transition-colors ${selectedCinema === index
-                                                ? 'bg-yellow-400 text-gray-900'
-                                                : 'hover:bg-gray-700'
-                                                }`}
-                                            onClick={() => setSelectedCinema(index)}
-                                        >
-                                            <img
-                                                src={cinema.logo}
-                                                alt={cinema.tenHeThongRap}
-                                                className="w-16 h-16 object-contain mb-2"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                }}
-                                            />
-                                            <span className="text-xs text-center">{cinema.tenHeThongRap}</span>
-                                        </div>
-                                    ))}
+                                    {Object.keys(groupedShowtimes).map((cinemaKey, index) => {
+                                        const cinema = groupedShowtimes[cinemaKey];
+                                        return (
+                                            <div
+                                                key={index}
+                                                className={`flex flex-col items-center p-3 rounded-lg cursor-pointer transition-colors ${selectedCinema === index
+                                                    ? 'bg-yellow-400 text-gray-900'
+                                                    : 'hover:bg-gray-700 cursor-pointer'
+                                                    }`}
+                                                onClick={() => setSelectedCinema(index)}
+                                            >
+                                                <img
+                                                    src={cinema.logo}
+                                                    alt={cinema.tenHeThongRap}
+                                                    className="w-16 h-16 object-contain mb-2"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                    }}
+                                                />
+                                                <span className="text-xs text-center">{cinema.tenHeThongRap}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            {/* Showtimes Panel */}
+                            {/* Showtimes Panel - Standardized */}
                             <div className="flex-1 bg-gray-800 rounded-r-lg p-6">
-                                {selectedCinema !== null && cinemaSystems[selectedCinema] ? (
+                                {selectedCinema !== null && selectedCinemaData ? (
                                     <div>
-                                        {/* Date Navigation */}
-                                        <div className="flex items-center justify-between mb-6">
-                                            <button className="text-gray-400 hover:text-white">
-                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                </svg>
-                                            </button>
+                                        {/* Cinema Complexes - Standardized */}
+                                        <div className="space-y-6">
+                                            {(() => {
+                                                const complexesWithShowtimes = Object.values(selectedCinemaData.cumRap).filter(cumRap =>
+                                                    getShowtimesForDate(cumRap.showtimes, selectedDate).length > 0
+                                                );
 
-                                            <div className="flex space-x-2">
-                                                {generateDates().map((date, index) => (
-                                                    <button
-                                                        key={index}
-                                                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${index === 0
-                                                            ? 'bg-red-500 text-white'
-                                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                                            }`}
-                                                        onClick={() => setSelectedDate(date)}
-                                                    >
-                                                        {date.getDate()}/{String(date.getMonth() + 1).padStart(2, '0')} {date.toLocaleDateString('vi-VN', { weekday: 'short' })}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                                if (complexesWithShowtimes.length > 0) {
+                                                    return complexesWithShowtimes.map((cumRap, cumRapIndex) => (
+                                                        <div key={cumRapIndex} className="border-b border-gray-700 pb-6">
+                                                            <div className="flex items-start mb-4">
+                                                                <img
+                                                                    src={selectedCinemaData.logo}
+                                                                    alt={cumRap.tenCumRap}
+                                                                    className="w-16 h-16 object-contain rounded-lg mr-4 flex-shrink-0"
+                                                                    onError={(e) => {
+                                                                        e.target.style.display = 'none';
+                                                                        e.target.nextSibling.style.display = 'block';
+                                                                    }}
+                                                                />
+                                                                <div className="w-16 h-16 bg-gray-700 rounded-lg mr-4 flex-shrink-0 hidden"></div>
+                                                                <div className="flex-1">
+                                                                    <h4 className="text-lg font-semibold text-white mb-1">
+                                                                        {cumRap.tenCumRap}
+                                                                    </h4>
+                                                                    <p className="text-gray-400 text-sm mb-2">
+                                                                        {cumRap.diaChi}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
 
-                                            <button className="text-gray-400 hover:text-white">
-                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </button>
+                                                            {/* Showtimes by format - Standardized */}
+                                                            <div className="space-y-3">
+                                                                <div className="text-sm text-gray-400 font-semibold">
+                                                                    2D DIGITAL
+                                                                </div>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {getShowtimesForDate(cumRap.showtimes, selectedDate).map((showtime, showtimeIndex) => (
+                                                                        <button
+                                                                            key={showtimeIndex}
+                                                                            className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-lg font-semibold hover:bg-yellow-300 transition-colors text-center cursor-pointer"
+                                                                            onClick={() => navigate(`/chitietphongve/${showtime.maLichChieu}`)}
+                                                                        >
+                                                                            {new Date(showtime.ngayChieuGioChieu).toLocaleTimeString('vi-VN', {
+                                                                                hour: '2-digit',
+                                                                                minute: '2-digit'
+                                                                            })}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ));
+                                                } else {
+                                                    return (
+                                                        <div className="text-center py-8">
+                                                            <div className="text-gray-400 text-xl">Chưa có lịch chiếu cho ngày này</div>
+                                                        </div>
+                                                    );
+                                                }
+                                            })()}
                                         </div>
-
-                                        {/* Cinema Details */}
-                                        <div className="flex items-center mb-6">
-                                            <img
-                                                src={cinemaSystems[selectedCinema].logo}
-                                                alt={cinemaSystems[selectedCinema].tenHeThongRap}
-                                                className="w-12 h-12 object-contain mr-4"
-                                                onError={(e) => {
-                                                    e.target.style.display = 'none';
-                                                }}
-                                            />
-                                            <div>
-                                                <h3 className="text-2xl font-bold text-yellow-400">
-                                                    {cinemaSystems[selectedCinema].tenHeThongRap}
-                                                </h3>
-                                                <p className="text-gray-400">L5-Vincom 3/2, 3C Đường 3/2, Q.10</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Showtimes */}
-                                        {cinemaShowtimesLoading ? (
-                                            <div className="text-center py-8">
-                                                <div className="text-gray-400">Loading showtimes...</div>
-                                            </div>
-                                        ) : extractedShowtimes.length > 0 ? (
-                                            <div className="space-y-6">
-                                                <h4 className="text-lg font-semibold text-gray-300 mb-4">VIEWING TIMES</h4>
-                                                <div className="grid grid-cols-3 gap-3">
-                                                    {extractedShowtimes.map((lichChieu, index) => (
-                                                        <button
-                                                            key={index}
-                                                            className="px-4 py-3 bg-yellow-400 text-gray-900 rounded-lg font-semibold hover:bg-yellow-300 transition-colors text-center"
-                                                        >
-                                                            {new Date(lichChieu.ngayChieuGioChieu).toLocaleTimeString('vi-VN', {
-                                                                hour: '2-digit',
-                                                                minute: '2-digit',
-                                                                second: '2-digit'
-                                                            })}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-8">
-                                                <div className="text-gray-400">Chưa có lịch chiếu cho ngày này</div>
-                                                {cinemaShowtimesError && (
-                                                    <div className="text-red-400 mt-2">Error: {cinemaShowtimesError}</div>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
                                 ) : (
                                     <div className="flex items-center justify-center h-64">
@@ -314,8 +431,47 @@ function MovieDetail() {
                             </div>
                         </div>
                     </div>
+                ) : (
+                    <div className="mt-12 text-center">
+                        <div className="text-gray-400 text-xl">Chưa có lịch chiếu cho phim này</div>
+                    </div>
                 )}
             </div>
+
+            {/* Trailer Modal */}
+            {isTrailerModalOpen && movie?.trailer && (
+                <div className="fixed inset-0 flex items-start justify-center z-[99999] pt-8" onClick={handleCloseTrailerModal}>
+                    <div className={`bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl border border-gray-600 transform transition-all duration-300 ease-out ${isTrailerClosing ? 'animate-slide-up' : 'animate-slide-down'}`} onClick={(e) => e.stopPropagation()}>
+                        {/* Modal Content */}
+                        <div>
+                            {videoId ? (
+                                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                                    <iframe
+                                        className="absolute top-0 left-0 w-full h-full rounded-lg"
+                                        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+                                        title="Movie Trailer"
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                    ></iframe>
+                                </div>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <p className="text-gray-400 text-lg">Không thể tải trailer</p>
+                                    <a
+                                        href={movie.trailer}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-400 hover:text-blue-300 underline mt-2 inline-block cursor-pointer"
+                                    >
+                                        Xem trên YouTube
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

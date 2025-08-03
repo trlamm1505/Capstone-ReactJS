@@ -1,11 +1,18 @@
 // Session Manager Utility
+
 class SessionManager {
     constructor() {
-        this.sessionTimeout = 10 * 60 * 1000; // 10 minutes in milliseconds
-        this.warningTimeout = 2 * 60 * 1000; // 2 minutes warning before session expires
+        this.sessionTimeout = 5 * 60 * 1000; // 5 minutes in milliseconds
         this.activityTimer = null;
-        this.warningTimer = null;
+        this.sessionExpiryTimer = null;
         this.isSessionActive = false;
+        this.store = null; // Will be set by setStore method
+    }
+
+    // Set Redux store for dispatching actions
+    setStore(store) {
+        this.store = store;
+        console.log('SessionManager: Store set successfully');
     }
 
     // Initialize session
@@ -53,41 +60,44 @@ class SessionManager {
         console.log('SessionManager: Activity tracking started');
     }
 
-    // Start session timer
+    // Start session timer for auto logout
     startSessionTimer() {
-        // Clear existing warning timer
-        if (this.warningTimer) {
-            clearTimeout(this.warningTimer);
+        // Clear existing timer
+        if (this.sessionExpiryTimer) {
+            clearTimeout(this.sessionExpiryTimer);
         }
 
-        // Set warning timer
-        this.warningTimer = setTimeout(() => {
-            this.showSessionWarning();
-        }, this.sessionTimeout - this.warningTimeout);
+        // Set session expiry timer
+        this.sessionExpiryTimer = setTimeout(() => {
+            console.log('SessionManager: Session expired, auto logout');
+            this.autoLogout();
+        }, this.sessionTimeout);
 
-        console.log('SessionManager: Session timer started');
+        console.log('SessionManager: Session timer started with', this.sessionTimeout / 1000, 'seconds timeout');
     }
 
-    // Show session warning
-    showSessionWarning() {
+    // Auto logout when session expires
+    autoLogout() {
         if (!this.isSessionActive) return;
 
-        const warningMessage = 'Phiên làm việc của bạn sẽ hết hạn trong 2 phút. Bạn có muốn tiếp tục?';
+        console.log('SessionManager: Auto logout due to session expiry');
+        this.logout();
 
-        if (confirm(warningMessage)) {
-            // User wants to continue, extend session
-            this.extendSession();
+        // Dispatch logout action to Redux if store is available
+        if (this.store) {
+            console.log('SessionManager: Dispatching logout action to Redux');
+            try {
+                this.store.dispatch({
+                    type: 'login/logout',
+                    payload: undefined
+                });
+                console.log('SessionManager: Logout action dispatched successfully');
+            } catch (error) {
+                console.error('SessionManager: Error dispatching logout action:', error);
+            }
         } else {
-            // User doesn't want to continue, logout
-            this.logout();
+            console.log('SessionManager: No Redux store available for logout dispatch');
         }
-    }
-
-    // Extend session
-    extendSession() {
-        console.log('SessionManager: Extending session');
-        this.updateLastActivity();
-        this.startSessionTimer();
     }
 
     // Check if session is still valid
@@ -142,9 +152,9 @@ class SessionManager {
             clearInterval(this.activityTimer);
             this.activityTimer = null;
         }
-        if (this.warningTimer) {
-            clearTimeout(this.warningTimer);
-            this.warningTimer = null;
+        if (this.sessionExpiryTimer) {
+            clearTimeout(this.sessionExpiryTimer);
+            this.sessionExpiryTimer = null;
         }
 
         // Clear localStorage
@@ -157,8 +167,7 @@ class SessionManager {
             console.error('SessionManager: Error clearing localStorage:', error);
         }
 
-        // Redirect to login page
-        window.location.href = '/login';
+        console.log('SessionManager: Session expired, data cleared');
     }
 
     // Stop session management
@@ -170,16 +179,15 @@ class SessionManager {
             clearInterval(this.activityTimer);
             this.activityTimer = null;
         }
-        if (this.warningTimer) {
-            clearTimeout(this.warningTimer);
-            this.warningTimer = null;
+        if (this.sessionExpiryTimer) {
+            clearTimeout(this.sessionExpiryTimer);
+            this.sessionExpiryTimer = null;
         }
     }
 
     // Set session timeout (in minutes)
     setSessionTimeout(minutes) {
         this.sessionTimeout = minutes * 60 * 1000;
-        this.warningTimeout = Math.min(5 * 60 * 1000, this.sessionTimeout / 6); // Warning at 1/6 of session time
         console.log('SessionManager: Session timeout set to', minutes, 'minutes');
     }
 }
