@@ -7,6 +7,12 @@ import loginReducer from "../HomeTemplate/LoginPage/slice";
 import registerReducer from "../HomeTemplate/RegisterPage/slice";
 import profileReducer from "../HomeTemplate/Profile/slice";
 import cinemaLayoutReducer from "../HomeTemplate/CinemaLayout/slice";
+import moviesAdminReducer from "../AdminTemplate/Movies/slice";
+import movieDetailAdminReducer from "../AdminTemplate/MovieDetailPage/slice";
+import showtimeReducer from "../AdminTemplate/AddTheater/slice";
+import addMovieReducer from "../AdminTemplate/AddMovie/slice";
+import updateMovieReducer from "../AdminTemplate/EditMovie/slice";
+import usersAdminReducer from "../AdminTemplate/Users/slice";
 
 export const store = configureStore({
     reducer: {
@@ -18,6 +24,12 @@ export const store = configureStore({
         register: registerReducer,
         profile: profileReducer,
         cinemaLayout: cinemaLayoutReducer,
+        moviesAdmin: moviesAdminReducer,
+        movieDetailAdmin: movieDetailAdminReducer,
+        showtimeAdmin: showtimeReducer,
+        addMovieAdmin: addMovieReducer,
+        updateMovieAdmin: updateMovieReducer,
+        usersAdmin: usersAdminReducer
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

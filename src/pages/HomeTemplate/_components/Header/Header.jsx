@@ -84,6 +84,10 @@ const Header = () => {
         fetchAllCinemaComplexes();
     };
 
+    const movingAdmin = () => {
+        navigate('/admin');
+    };
+
     const fetchAllCinemaComplexes = async () => {
         setLoadingAllComplexes(true);
         const allComplexesData = [];
@@ -201,6 +205,16 @@ const Header = () => {
                             >
                                 RẠP
                             </button>
+
+                            {/* THAITD */}
+                            {isAuthenticated && user && user.maLoaiNguoiDung =='QuanTri' && (
+                                <button
+                                    onClick={movingAdmin}
+                                    className="text-white font-semibold uppercase tracking-wide hover:text-yellow-400 transition-colors duration-200 cursor-pointer"
+                                >
+                                    MANAGEMENT
+                                </button>
+                            )}
                         </nav>
 
                         {/* User Section - Right */}
@@ -306,6 +320,7 @@ const Header = () => {
                                 <div className="px-3 py-2 text-white font-semibold uppercase tracking-wide">
                                     RẠP
                                 </div>
+
 
                                 {/* Mobile Auth Links - Show when not authenticated */}
                                 {!isAuthenticated && (
