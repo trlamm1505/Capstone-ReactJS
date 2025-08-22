@@ -1,10 +1,24 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../../services/api';
 
+export const fetchUsers = createAsyncThunk('users/fetchUsers', async (taiKhoan, { rejectWithValue }) => {
+    try {
+        const response = await api.get(`/QuanLyNguoiDung/LayDanhSachNguoiDung?taiKhoan=${taiKhoan}`);
+        return response.data;
+    }
+    catch (error) {
+        return rejectWithValue(handleError(error));
+    }
+});
 
-export const fetchUsers = createAsyncThunk('users/fetchUsers', async () => {
-    const response = await api.get(`/QuanLyNguoiDung/LayDanhSachNguoiDung`);
-    return response.data;
+export const searchUsersByAccount = createAsyncThunk('users/searchUsersByAccount', async (tuKhoa, { rejectWithValue }) => {
+    try {
+        const response = await api.get(tuKhoa ? `/QuanLyNguoiDung/TimKiemNguoiDung?tuKhoa=${tuKhoa}&&MaNhom=GP00` : `/QuanLyNguoiDung/TimKiemNguoiDung?MaNhom=GP00`) ;
+        return response.data;
+    }
+    catch (error) {
+        return rejectWithValue(handleError(error));
+    }
 });
 
 export const fetchUserTypes = createAsyncThunk('users/fetchUserTypes', async (_, { rejectWithValue }) => {
@@ -14,26 +28,11 @@ export const fetchUserTypes = createAsyncThunk('users/fetchUserTypes', async (_,
         return response.data;
     }
     catch (error) {
-        let errorMessage = "";
-
-        if (error.response?.data?.content) {
-            errorMessage = error.response.data.content;
-        } else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.response?.data) {
-            errorMessage = typeof error.response.data === 'string'
-                ? error.response.data
-                : JSON.stringify(error.response.data);
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-
-        return rejectWithValue(errorMessage);
+        return rejectWithValue(handleError(error));
     }
 });
 
 export const addUser = createAsyncThunk('users/addUser', async (userData, { rejectWithValue }) => {
-
     try {
         const res = await api.post(`/QuanLyNguoiDung/ThemNguoiDung`, userData, {
             headers: {
@@ -43,23 +42,8 @@ export const addUser = createAsyncThunk('users/addUser', async (userData, { reje
         console.log(res, 'res addUser');
         return res.data;
     } catch (error) {
-        let errorMessage = "Error system";
-
-        if (error.response?.data?.content) {
-            errorMessage = error.response.data.content;
-        } else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.response?.data) {
-            errorMessage = typeof error.response.data === 'string'
-                ? error.response.data
-                : JSON.stringify(error.response.data);
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-
-        return rejectWithValue(errorMessage);
+        return rejectWithValue(handleError(error));
     }
-
 });
 
 export const editUser = createAsyncThunk('users/editUser', async (userData, { rejectWithValue }) => {
@@ -69,25 +53,38 @@ export const editUser = createAsyncThunk('users/editUser', async (userData, { re
                 "Content-Type": "application/json"
             },
         });
-        console.log(res, 'res editUser');
         return res.data;
     }
     catch (error) {
-        let errorMessage = "Đăng ký thất bại";
+        return rejectWithValue(handleError(error));
+    }
+});
 
-        if (error.response?.data?.content) {
-            errorMessage = error.response.data.content;
-        } else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.response?.data) {
-            errorMessage = typeof error.response.data === 'string'
-                ? error.response.data
-                : JSON.stringify(error.response.data);
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
+const handleError = (error) => {
+    let errorMessage = "Lỗi hệ thống";
 
-        return rejectWithValue(errorMessage);
+    if (error.response?.data?.content) {
+        errorMessage = error.response.data.content;
+    } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+    } else if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string'
+            ? error.response.data
+            : JSON.stringify(error.response.data);
+    } else if (error.message) {
+        errorMessage = error.message;
+    }
+
+    return errorMessage;
+}
+
+export const delUsers = createAsyncThunk('users/delUsers', async (taiKhoan, { rejectWithValue }) => {
+    try {
+        const response = await api.delete(`/QuanLyNguoiDung/XoaNguoiDung/?TaiKhoan=${taiKhoan}`);
+        return response.data;
+    }
+    catch (error) {
+        return rejectWithValue(handleError(error));
     }
 });
 
@@ -132,13 +129,17 @@ const userSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            .addCase(fetchUsers.pending, (state, action) => {
+            .addCase(searchUsersByAccount.pending, (state, action) => {
                 state.error = "";
             })
-            .addCase(fetchUsers.fulfilled, (state, action) => {
+            .addCase(searchUsersByAccount.fulfilled, (state, action) => {
                 state.list = action.payload.content;
                 state.listFilter = action.payload.content;
                 state.status = 'succeeded';
+            })
+            .addCase(searchUsersByAccount.rejected, (state, action) => {
+                state.error = action.payload;
+                state.success = false;
             })
             .addCase(fetchUserTypes.fulfilled, (state, action) => {
                 state.userTypes = action.payload.content;
@@ -152,7 +153,7 @@ const userSlice = createSlice({
                 state.success = true;
             })
             .addCase(addUser.rejected, (state, action) => {
-                state.error = action.payload || "Lỗi hệ thống";
+                state.error = action.payload;
                 state.success = false;
             })
             .addCase(editUser.pending, (state, action) => {
@@ -165,9 +166,23 @@ const userSlice = createSlice({
                 state.success = true;
             })
             .addCase(editUser.rejected, (state, action) => {
-                state.error = action.payload || "Lỗi hệ thống";
+                state.error = action.payload;
+                state.success = false;
+            }).addCase(delUsers.pending, (state, action) => {
+                state.error = "";
+                state.success = false;
+            })
+            .addCase(delUsers.fulfilled, (state, action) => {
+                state.user = null;
+                state.error = action.payload.content;
+                state.success = true;
+            })
+            .addCase(delUsers.rejected, (state, action) => {
+                state.error = action.payload;
                 state.success = false;
             });
+
+
 
     },
 });

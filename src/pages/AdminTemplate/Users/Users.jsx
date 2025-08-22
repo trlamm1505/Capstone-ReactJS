@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchUsers, fetchUserTypes, addUser, searchUsers, editUser, resetState } from './slice';
+import { searchUsersByAccount, fetchUserTypes, addUser, searchUsers, editUser, resetState, delUsers } from './slice';
 import { PencilSquareIcon, TrashIcon } from '@heroicons/react/16/solid';
 import { z } from "zod";
 import { toast, ToastContainer } from 'react-toastify';
@@ -19,7 +19,7 @@ export default function Users() {
     const dispatch = useDispatch();
     // const usersOrg = useSelector((state) => state.usersAdmin.list);
     // const users = useSelector((state) => state.usersAdmin.listFilter);
-    const { error, success, listFilter } = useSelector((state) => state.usersAdmin);
+    const { error, success, loading, listFilter } = useSelector((state) => state.usersAdmin);
     const users = listFilter;
 
     const user = useSelector((state) => state.usersAdmin.user);
@@ -37,7 +37,7 @@ export default function Users() {
     });
 
     useEffect(() => {
-        dispatch(fetchUsers());
+        dispatch(searchUsersByAccount(textSearch));
         dispatch(fetchUserTypes());
     }, [dispatch]);
 
@@ -67,7 +67,7 @@ export default function Users() {
             hoTen: '',
             email: '',
             soDT: '',
-            maNhom: 'GP01',
+            maNhom: 'GP00',
             maLoaiNguoiDung: '',
         });
         setAction('themmoi');
@@ -95,7 +95,7 @@ export default function Users() {
         const payload = handlePayload();
         if (!payload) return;
         await dispatch(addUser(payload));
-        dispatch(fetchUsers());
+        dispatch(searchUsersByAccount(textSearch));
 
         resetForm();
     }
@@ -106,7 +106,7 @@ export default function Users() {
         const payload = handlePayload();
         if (!payload) return;
         await dispatch(editUser(payload));
-        dispatch(fetchUsers());
+        dispatch(searchUsersByAccount(textSearch));
 
         resetForm();
     }
@@ -129,6 +129,12 @@ export default function Users() {
         payload.append("maLoaiNguoiDung", form.maLoaiNguoiDung);
 
         return Object.fromEntries(payload.entries());
+    }
+
+    const handleOnDelete = async (e, taiKhoan) => {
+        e.preventDefault();
+        await dispatch(delUsers(taiKhoan));
+        dispatch(searchUsersByAccount(textSearch));
     }
 
     return (
@@ -192,8 +198,8 @@ export default function Users() {
                         onChange={(e) => setTextSearch(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     />
-                    <button
-                        className="flex items-center justify-center px-4 bg-blue-600 text-white rounded-r-md hover:bg-blue-700 transition"
+                    <button onClick={() => dispatch(searchUsersByAccount(textSearch))}
+                        className="cursor-pointer flex items-center justify-center px-4 bg-blue-600 text-white rounded-r-md hover:bg-blue-700 transition"
                     >
                         <svg
                             className="w-5 h-5"
@@ -216,16 +222,20 @@ export default function Users() {
                         </tr>
                     </thead>
                     <tbody>
-                        {users && Array.isArray(users) ? users.map((user) => (
+
+                        {loading && (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        )}
+                        {!loading && users && Array.isArray(users) ? users.map((user) => (
                             <tr key={user.taiKhoan} className='cursor-pointer hover:bg-gray-100'>
-                                <td className="px-4 py-2">{user.taiKhoan}</td>
-                                <td className="px-4 py-2">{user.hoTen}</td>
-                                <td className="px-4 py-2">{user.email}</td>
-                                <td className="px-4 py-2">{user.soDT}</td>
-                                <td className="px-4 py-2">{user.maLoaiNguoiDung}</td>
-                                <td className="text-left px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <button className="btn btn-info" data-toggle="modal" onClick={() => fillFormData(user.taiKhoan)}><PencilSquareIcon className="h-5 w-5 text-purple-500" /></button>
-                                    <button className="btn btn-danger" onClick={() => handleOnDelete(user.taiKhoan)}><TrashIcon className="h-5 w-5 text-red-500" /> </button>
+                                <td className="px-2 py-2">{user.taiKhoan}</td>
+                                <td className="px-2 py-2">{user.hoTen}</td>
+                                <td className="px-2 py-2">{user.email.length > 10 ? (user.email.slice(0,10)+'...') : user.email}</td>
+                                <td className="px-2 py-2">{user.soDT}</td>
+                                <td className="px-2 py-2">{user.maLoaiNguoiDung}</td>
+                                <td className="text-left px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <button className="cursor-pointer btn btn-info" data-toggle="modal" onClick={() => fillFormData(user.taiKhoan)}><PencilSquareIcon className="h-5 w-5 text-purple-500" /></button>
+                                    <button className="cursor-pointer btn btn-danger" onClick={(e) => handleOnDelete(e, user.taiKhoan)}><TrashIcon className="h-5 w-5 text-red-500" /> </button>
                                 </td>
                             </tr>
                         )) : ''}
